@@ -1,0 +1,72 @@
+title: Ukraine: State of the Energy System | January 2026
+description: Updated on 26.01.2026
+authors:
+  - Prepared by GDU Data and Modelling Team - Robert Carr & Frank Meissner
+contact: robert.carr@helmholtz-berlin.de
+logos:
+  - logos/HZB_logo-a4-rgb transparent.png
+  - logos/GDU_logo_nowhitespace.png
+summary:
+  heading: Summary of recent news
+  bullets:
+    - Jan 13 - Attacks took place on 15 critical infrastructure facilities across the country, including thermal power plants and CHPs.
+    - Despite this, 99% of residential buildings and 98.5% of social infrastructure have functioning heat.
+    - Indirect attacks on heat supply - strikes on power grid/substations trigger heat outages even when boiler houses remain functional
+    - Kyiv remains a hotspot for attacks that interrupt heat provision, though the number of buildings without functioning central heating has decreased from 6,000 on 9/10 Jan to 1000 on 11 Jan. Reports from the 14 Jan suggest ~500 buildings remain without central heat. 
+    - Authorities and humanitarian actors have relied on "Points of Invincibility" (resilient heated tents/shelters) for warming, charging devices, and basic services during outages.
+    - Restoration work is constantly on-going and support for emergency workers has been expanded.
+    - Water outages reported in Kyiv as of 14 Jan.
+
+  sources:
+    - label: Associated Press
+      url: https://apnews.com/article/aa7d5c2e54619fefabab72165444f8e3
+    - label: BBC
+      url: https://www.bbc.com/news/articles/cgm4w1g3dggo 
+    - label: Interfax
+      url: https://en.interfax.com.ua/news/economic/1136081.html?utm_source=chatgpt.com
+    - label: Reuters
+      url: https://www.reuters.com/world/ukraine-toils-restore-power-heat-zelenskiy-warns-new-attack-2026-01-12/
+tip: Tip: You can hover, pan, zoom, and select within each figure to explore specific time periods and regions. You can also click legend items to show/hide them. 
+  
+  
+panels:
+  - id: crossborder
+    title: Cross-border electricity trade (commerical flows)
+    plot: plots/ua_crossborder_monthly.html
+    note: Data between March and December 2022 is not available. January 2026 goes until the 21st. 
+    source: Energy Charts, ENTSO-E Transparency Platform
+    bullets:
+      - Prior to February 2022, Ukraine was a net electricity exporter, integrated within the IPS/UPS system.
+      - After full invasion, synchronization with ENTSO-E in early 2022 was accompanied by a loss of imports from Belarus.
+      - Strong import surge occured in mid-2024 (over 1.5 TWh/month) to cover domestic shortfalls after Russian attacks in spring 2024.
+      - Following  capacity repairs in 2024, imports stabilised, declined and net exports restarted from mid-2025 onwards.
+      - Import dependency rises again in October 2025 following further attacks by Russia. December 2025 saw highest volume of imports since January 2025.
+  - id: generation
+    title: Status of installed generation capacities
+    plot: plots/gen_capacity_development.html
+    source: GDU internal assessment based on media reports and satellite imagery
+    bullets:
+      - Conventional plants have been repeatedly subject to attacks by Russia, damaging the already old, inefficient infrastructure. 
+      - Destruction from attacks in October 2025 mainly affected CHPs, and infrastructure at DSO level, such as transformers.
+      - Due to occupation and destruction, renewable energy capacity fell from 9.6 GW (January 2022) to 7.4 GW in October 2025. 
+      - November 2025 attacks have hit coal-plants particularly hard, dropping available conventional capacity below 13 GW for the first time since April 2024. 
+      - Repairs over the last month have restored around 1.4 GW of net capacity (majority thermal) when accounting for more recent attacks in December/January.
+  - id: gas-storage
+    title: Gas storage reserves
+    plot: plots/ua_gas_storage_curves.html
+    note: Excluding technical gas
+    source: Aggregated Gas Storage Inventory (AGSI)
+    bullets:
+      - Excluding technical gas, storage levels were refilled from less than 1000 mcm in May 2025 to around 8600 mcm by November 2025.
+      - If daily gas consumption and production in 2026 follow the same trends as 2025 (in terms of absolute volumes in mcm), just under 4000 mcm would be left in storage by the end of the heating season.
+      - This marks an improvement compared to the same period in early 2025, suggesting that repairs to domestic production facilities have been largely successful.
+      - Despite online rumours that the recent Oreshnik missile attack targeted gas storage, no damage was reported.
+  - id: outages
+    title: Scheduled outages (ADM1)
+    plot: plots/ua_outage_map.html
+    source: Various DSO websites
+    bullets:
+      - Here we provide the average hours of scheduled outages for several Oblasts over differnt time periods. 
+      - Repeated attacks on energy facilities between November 2025 and January 2026 have led to widespread, scheduled outages.
+      - Massive attacks took place on 7/8 November 2025, and again on the 6/7 January 2026. 
+      - We show the week before the November attack and the week after. For January, we show the first week of the year, and then an individal day following the Jan 6/7 attacks. 

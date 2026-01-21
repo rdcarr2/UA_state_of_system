@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Build a static dashboard HTML from a YAML file and HTML template.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+import shutil
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DASH_DIR = BASE_DIR / "dashboards"
+SITE_DIR = BASE_DIR / "docs"
+YAML_PATH = DASH_DIR / "dashboard.yaml"
+TEMPLATE_PATH = DASH_DIR / "template.html"
+OUT_HTML = SITE_DIR / "index.html"
+
+
+def _strip_quotes(value: str) -> str:
+    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+        return value[1:-1]
+    return value
+
+
+def _parse_scalar(value: str) -> Any:
+    value = value.strip()
+    value = _strip_quotes(value)
+    return value
+
+
+def _parse_block(lines: List[str], start: int, indent: int) -> Tuple[Any, int]:
+    obj: Any = None
+    i = start
+    while i < len(lines):
+        raw = lines[i]
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            i += 1
+            continue
+        curr_indent = len(raw) - len(raw.lstrip(" "))
+        if curr_indent < indent:
+            break
+        if curr_indent > indent:
+            # Unexpected indent; treat as part of previous block.
+            break
+        line = raw[indent:]
+        if line.startswith("- "):
+            if obj is None:
+                obj = []
+            item = line[2:].strip()
+            if item == "":
+                val, i = _parse_block(lines, i + 1, indent + 2)
+                obj.append(val)
+                continue
+            if ":" in item:
+                key, rest = item.split(":", 1)
+                rest = rest.strip()
+                item_obj: Dict[str, Any] = {}
+                if rest == "|":
+                    val, i = _parse_block_scalar(lines, i + 1, indent + 2)
+                    item_obj[key.strip()] = val
+                elif rest == "":
+                    val, i = _parse_block(lines, i + 1, indent + 2)
+                    item_obj[key.strip()] = val
+                else:
+                    item_obj[key.strip()] = _parse_scalar(rest)
+                    i += 1
+                # Parse additional mapping lines for this list item
+                if i < len(lines):
+                    nxt = lines[i]
+                    nxt_indent = len(nxt) - len(nxt.lstrip(" "))
+                    if nxt_indent == indent + 2 and not nxt.lstrip().startswith("- "):
+                        extra, i = _parse_map(lines, i, indent + 2)
+                        item_obj.update(extra)
+                obj.append(item_obj)
+            else:
+                obj.append(_parse_scalar(item))
+                i += 1
+        else:
+            if obj is None:
+                obj = {}
+            if ":" not in line:
+                i += 1
+                continue
+            key, rest = line.split(":", 1)
+            key = key.strip()
+            rest = rest.strip()
+            if rest == "|":
+                val, i = _parse_block_scalar(lines, i + 1, indent + 2)
+                obj[key] = val
+            elif rest == "":
+                val, i = _parse_block(lines, i + 1, indent + 2)
+                obj[key] = val
+            else:
+                obj[key] = _parse_scalar(rest)
+                i += 1
+    return obj, i
+
+
+def _parse_map(lines: List[str], start: int, indent: int) -> Tuple[Dict[str, Any], int]:
+    data: Dict[str, Any] = {}
+    i = start
+    while i < len(lines):
+        raw = lines[i]
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            i += 1
+            continue
+        curr_indent = len(raw) - len(raw.lstrip(" "))
+        if curr_indent < indent:
+            break
+        if curr_indent > indent:
+            break
+        line = raw[indent:]
+        if line.startswith("- "):
+            break
+        if ":" not in line:
+            i += 1
+            continue
+        key, rest = line.split(":", 1)
+        key = key.strip()
+        rest = rest.strip()
+        if rest == "|":
+            val, i = _parse_block_scalar(lines, i + 1, indent + 2)
+            data[key] = val
+        elif rest == "":
+            val, i = _parse_block(lines, i + 1, indent + 2)
+            data[key] = val
+        else:
+            data[key] = _parse_scalar(rest)
+            i += 1
+    return data, i
+
+
+def _parse_block_scalar(lines: List[str], start: int, indent: int) -> Tuple[str, int]:
+    buf: List[str] = []
+    i = start
+    while i < len(lines):
+        raw = lines[i]
+        curr_indent = len(raw) - len(raw.lstrip(" "))
+        if curr_indent < indent:
+            break
+        buf.append(raw[indent:])
+        i += 1
+    return "\n".join(buf).rstrip(), i
+
+
+def parse_yaml(path: Path) -> Dict[str, Any]:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    data, _ = _parse_block(lines, 0, 0)
+    if not isinstance(data, dict):
+        raise ValueError("YAML root must be a mapping")
+    return data
+
+
+def render_header(cfg: Dict[str, Any]) -> str:
+    logos = cfg.get("logos", [])
+    logos_html = "".join([f'<img src="{p}" alt="logo">' for p in logos])
+    authors = cfg.get("authors", [])
+    author_text = ", ".join(authors)
+    contact = cfg.get("contact", "")
+    contact_html = f"<div class=\"authors\">Contact: {contact}</div>" if contact else ""
+    title = cfg.get("title", "")
+    title_html = title.replace(" | ", "<br>")
+    return (
+        "<header>"
+        "<div>"
+        f"<h1 class=\"title\">{title_html}</h1>"
+        f"<p class=\"description\">{cfg.get('description','')}</p>"
+        f"<div class=\"authors\">{author_text}</div>"
+        f"{contact_html}"
+        "</div>"
+        f"<div class=\"logo-bar\">{logos_html}</div>"
+        "</header>"
+    )
+
+
+def render_summary(cfg: Dict[str, Any]) -> str:
+    summary = cfg.get("summary", {})
+    heading = summary.get("heading", "")
+    bullets = summary.get("bullets", [])
+    li = "".join([f"<li>{b}</li>" for b in bullets])
+    sources = summary.get("sources", [])
+    src_items = []
+    for src in sources:
+        label = src.get("label", "")
+        url = src.get("url", "")
+        if url:
+            src_items.append(f"<li><a href=\"{url}\" target=\"_blank\" rel=\"noopener\">{label or url}</a></li>")
+        else:
+            src_items.append(f"<li>{label}</li>")
+    sources_html = ""
+    if src_items:
+        sources_html = f"<h3>Sources</h3><ul class=\"sources\">{''.join(src_items)}</ul>"
+    return f"<section class=\"summary\"><h2>{heading}</h2><ul>{li}</ul>{sources_html}</section>"
+
+
+def render_tip(cfg: Dict[str, Any]) -> str:
+    tip = cfg.get("tip", "")
+    if not tip:
+        return ""
+    return f"<section class=\"tip\">{tip}</section>"
+
+
+def render_panels(cfg: Dict[str, Any]) -> str:
+    panels = cfg.get("panels", [])
+    blocks = []
+    for panel in panels:
+        title = panel.get("title", "")
+        plot = panel.get("plot", "")
+        bullets = panel.get("bullets", [])
+        note = panel.get("note", "")
+        source = panel.get("source", "")
+        li = "".join([f"<li>{b}</li>" for b in bullets])
+        meta_bits = []
+        if note:
+            meta_bits.append(f"<div><strong>Note:</strong> {note}</div>")
+        if source:
+            meta_bits.append(f"<div><strong>Source:</strong> {source}</div>")
+        meta_html = f"<div class=\"meta\">{''.join(meta_bits)}</div>" if meta_bits else ""
+        block = (
+            "<article class=\"panel\">"
+            f"<h3>{title}</h3>"
+            f"<button class=\"expand-btn\" data-expand data-title=\"{title}\" data-src=\"{plot}\">Expand</button>"
+            f"<iframe src=\"{plot}\" loading=\"lazy\"></iframe>"
+            f"{meta_html}"
+            f"<ul>{li}</ul>"
+            "</article>"
+        )
+        blocks.append(block)
+    return "".join(blocks)
+
+
+def main() -> None:
+    cfg = parse_yaml(YAML_PATH)
+    template = TEMPLATE_PATH.read_text(encoding="utf-8")
+    html = (
+        template.replace("{{TITLE}}", cfg.get("title", "Dashboard"))
+        .replace("{{HEADER}}", render_header(cfg))
+        .replace("{{SUMMARY}}", render_summary(cfg))
+        .replace("{{TIP}}", render_tip(cfg))
+        .replace("{{PANELS}}", render_panels(cfg))
+    )
+    SITE_DIR.mkdir(parents=True, exist_ok=True)
+    (SITE_DIR / "plots").mkdir(parents=True, exist_ok=True)
+    (SITE_DIR / "logos").mkdir(parents=True, exist_ok=True)
+    OUT_HTML.write_text(html, encoding="utf-8")
+
+    # Copy plots and logos into docs for GitHub Pages.
+    plots_src = BASE_DIR / "plots"
+    for plot in plots_src.glob("*.html"):
+        shutil.copy2(plot, SITE_DIR / "plots" / plot.name)
+
+    for logo in (BASE_DIR / "logos").iterdir():
+        if logo.is_file():
+            shutil.copy2(logo, SITE_DIR / "logos" / logo.name)
+
+
+if __name__ == "__main__":
+    main()
