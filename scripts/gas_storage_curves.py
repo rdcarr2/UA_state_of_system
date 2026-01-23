@@ -12,17 +12,13 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
+import argparse
 from typing import Dict, List, Optional, Tuple
 
 import plotly.graph_objects as go
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-PLOTS_DIR = BASE_DIR / "plots"
-
-INPUT_CSV = DATA_DIR / "UA_gas_storage_daily_2024_2026.csv"
-OUT_HTML = PLOTS_DIR / "ua_gas_storage_curves.html"
 
 
 SERIES = [
@@ -45,8 +41,8 @@ def _parse_float(value: str) -> Optional[float]:
         return None
 
 
-def load_series() -> Tuple[List[int], Dict[str, List[Optional[float]]]]:
-    with INPUT_CSV.open(newline="", encoding="utf-8-sig") as f:
+def load_series(input_csv: Path) -> Tuple[List[int], Dict[str, List[Optional[float]]]]:
+    with input_csv.open(newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         days: List[int] = []
         data: Dict[str, List[Optional[float]]] = {key: [] for key, *_ in SERIES}
@@ -97,14 +93,26 @@ def build_figure(days: List[int], data: Dict[str, List[Optional[float]]]) -> go.
     return fig
 
 
-def main() -> None:
-    if not INPUT_CSV.exists():
-        raise FileNotFoundError(f"Missing input file: {INPUT_CSV}")
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build gas storage curves")
+    parser.add_argument("period", help="Data/output subfolder name, e.g. Jan_2026")
+    return parser.parse_args()
 
-    days, data = load_series()
+
+def main() -> None:
+    args = parse_args()
+    data_dir = BASE_DIR / "data" / args.period
+    plots_dir = BASE_DIR / "plots" / args.period
+    input_csv = data_dir / "UA_gas_storage_daily_2024_2026.csv"
+    out_html = plots_dir / "ua_gas_storage_curves.html"
+
+    if not input_csv.exists():
+        raise FileNotFoundError(f"Missing input file: {input_csv}")
+
+    days, data = load_series(input_csv)
     fig = build_figure(days, data)
-    PLOTS_DIR.mkdir(parents=True, exist_ok=True)
-    fig.write_html(OUT_HTML, include_plotlyjs=True, full_html=True)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    fig.write_html(out_html, include_plotlyjs=True, full_html=True)
 
 
 if __name__ == "__main__":

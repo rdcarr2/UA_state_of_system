@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+import argparse
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -38,10 +39,6 @@ CHUNK_SIZE = pd.DateOffset(months=6)
 
 # Where to save outputs (change if you like)
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-PLOTS_DIR = BASE_DIR / "plots"
-OUT_HTML = PLOTS_DIR / "ua_crossborder_monthly.html"
-OUT_XLSX_HOURLY_WIDE = DATA_DIR / "ua_cbet_hourly_wide.xlsx"   # optional convenience export
 # ------------------------------------------------------
 
 
@@ -286,9 +283,20 @@ def build_plotly_stacked(monthly: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build cross-border monthly plot")
+    parser.add_argument("period", help="Output subfolder name, e.g. Jan_2026")
+    return parser.parse_args()
+
+
 def main():
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    args = parse_args()
+    data_dir = BASE_DIR / "data" / args.period
+    plots_dir = BASE_DIR / "plots" / args.period
+    data_dir.mkdir(parents=True, exist_ok=True)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    out_html = plots_dir / "ua_crossborder_monthly.html"
+    out_xlsx_hourly_wide = data_dir / "ua_cbet_hourly_wide.xlsx"
 
     session = build_session()
 
@@ -309,15 +317,15 @@ def main():
     hourly_wide = to_hourly_wide(df_long)
 
     # Optional: save hourly wide for debugging / reproducibility
-    hourly_wide.to_excel(OUT_XLSX_HOURLY_WIDE, index=False)
+    hourly_wide.to_excel(out_xlsx_hourly_wide, index=False)
 
     monthly = monthly_gwh(hourly_wide)
 
     fig = build_plotly_stacked(monthly)
-    fig.write_html(OUT_HTML, include_plotlyjs=True, full_html=True)
+    fig.write_html(out_html, include_plotlyjs=True, full_html=True)
 
-    print(f"Wrote interactive HTML → {OUT_HTML}")
-    print(f"(Optional) wrote hourly wide Excel → {OUT_XLSX_HOURLY_WIDE}")
+    print(f"Wrote interactive HTML → {out_html}")
+    print(f"(Optional) wrote hourly wide Excel → {out_xlsx_hourly_wide}")
 
 
 if __name__ == "__main__":

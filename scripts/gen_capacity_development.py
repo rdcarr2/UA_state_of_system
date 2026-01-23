@@ -16,18 +16,13 @@ import zipfile
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
+import argparse
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import plotly.graph_objects as go
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-PLOTS_DIR = BASE_DIR / "plots"
-
-INPUT_XLSX = DATA_DIR / "Gen_capacity_development.xlsx"
-OUT_HTML = PLOTS_DIR / "gen_capacity_development.html"
-OUT_CSV = DATA_DIR / "gen_capacity_development_summary.csv"
 
 CATEGORIES = ["Operating", "Attacked Damaged", "Destroyed", "Occupied"]
 
@@ -168,25 +163,38 @@ def build_figure(sheet_names: List[str], data_by_sheet: List[Dict[str, float]]) 
     return fig
 
 
-def write_summary_csv(sheet_names: List[str], data_by_sheet: List[Dict[str, float]]) -> None:
+def write_summary_csv(sheet_names: List[str], data_by_sheet: List[Dict[str, float]], out_csv: Path) -> None:
     rows = []
     for name, data in zip(sheet_names, data_by_sheet):
         row = {"Sheet": name}
         row.update({cat: data.get(cat, 0.0) for cat in CATEGORIES})
         rows.append(row)
 
-    OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
-    with OUT_CSV.open("w", newline="") as f:
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    with out_csv.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["Sheet"] + CATEGORIES)
         writer.writeheader()
         writer.writerows(rows)
 
 
-def main() -> None:
-    if not INPUT_XLSX.exists():
-        raise FileNotFoundError(f"Missing input file: {INPUT_XLSX}")
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build generation capacity development plot")
+    parser.add_argument("period", help="Data/output subfolder name, e.g. Jan_2026")
+    return parser.parse_args()
 
-    with zipfile.ZipFile(INPUT_XLSX) as zf:
+
+def main() -> None:
+    args = parse_args()
+    data_dir = BASE_DIR / "data" / args.period
+    plots_dir = BASE_DIR / "plots" / args.period
+    input_xlsx = data_dir / "Gen_capacity_development.xlsx"
+    out_html = plots_dir / "gen_capacity_development.html"
+    out_csv = data_dir / "gen_capacity_development_summary.csv"
+
+    if not input_xlsx.exists():
+        raise FileNotFoundError(f"Missing input file: {input_xlsx}")
+
+    with zipfile.ZipFile(input_xlsx) as zf:
         shared = _load_shared_strings(zf)
         sheets = _sheet_map(zf)
 
@@ -199,9 +207,9 @@ def main() -> None:
             data_by_sheet.append(_parse_sheet(zf, sh.path, shared))
 
     fig = build_figure(sheet_names, data_by_sheet)
-    PLOTS_DIR.mkdir(parents=True, exist_ok=True)
-    fig.write_html(OUT_HTML, include_plotlyjs=True, full_html=True)
-    write_summary_csv(sheet_names, data_by_sheet)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    fig.write_html(out_html, include_plotlyjs=True, full_html=True)
+    write_summary_csv(sheet_names, data_by_sheet, out_csv)
 
 
 if __name__ == "__main__":

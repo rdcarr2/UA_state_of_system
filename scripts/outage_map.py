@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+import argparse
 from typing import Dict, List, Tuple
 
 import plotly.graph_objects as go
@@ -20,13 +21,12 @@ import plotly.graph_objects as go
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SHAPE_DIR = BASE_DIR / "shapefiles"
-PLOTS_DIR = BASE_DIR / "plots"
 
 ADM1_SHP = SHAPE_DIR / "ukr_admbnda_adm1_sspe_20240416.shp"
 UKR_SHP = SHAPE_DIR / "Ukraine.shp"
 CONTESTED_SHP = SHAPE_DIR / "contested_territory.shp"
 
-OUT_HTML = PLOTS_DIR / "ua_outage_map.html"
+OUT_HTML_NAME = "ua_outage_map.html"
 
 # (attribute_name, label)
 MAP_ATTRS = [
@@ -311,11 +311,20 @@ def build_figure() -> go.Figure:
     return fig
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build outage map")
+    parser.add_argument("period", help="Output subfolder name, e.g. Jan_2026")
+    return parser.parse_args()
+
+
 def main() -> None:
-    PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    args = parse_args()
+    plots_dir = BASE_DIR / "plots" / args.period
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    out_html = plots_dir / OUT_HTML_NAME
     fig = build_figure()
     fig.write_html(
-        OUT_HTML,
+        out_html,
         include_plotlyjs=True,
         full_html=True,
         config={

@@ -9,15 +9,13 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+import argparse
 import shutil
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DASH_DIR = BASE_DIR / "dashboards"
 SITE_DIR = BASE_DIR / "docs"
-YAML_PATH = DASH_DIR / "dashboard.yaml"
-TEMPLATE_PATH = DASH_DIR / "template.html"
-OUT_HTML = SITE_DIR / "index.html"
 
 
 def _strip_quotes(value: str) -> str:
@@ -160,16 +158,20 @@ def render_header(cfg: Dict[str, Any]) -> str:
     logos_html = "".join([f'<img src="{p}" alt="logo">' for p in logos])
     authors = cfg.get("authors", [])
     author_text = ", ".join(authors)
+    contributors = cfg.get("contributors", [])
+    contributor_text = ", ".join(contributors)
     contact = cfg.get("contact", "")
     contact_html = f"<div class=\"authors\">Contact: {contact}</div>" if contact else ""
     title = cfg.get("title", "")
     title_html = title.replace(" | ", "<br>")
+    contributor_html = f"<div class=\"authors\">Contributors: {contributor_text}</div>" if contributor_text else ""
     return (
         "<header>"
         "<div>"
         f"<h1 class=\"title\">{title_html}</h1>"
         f"<p class=\"description\">{cfg.get('description','')}</p>"
         f"<div class=\"authors\">{author_text}</div>"
+        f"{contributor_html}"
         f"{contact_html}"
         "</div>"
         f"<div class=\"logo-bar\">{logos_html}</div>"
@@ -233,9 +235,22 @@ def render_panels(cfg: Dict[str, Any]) -> str:
     return "".join(blocks)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build dashboard HTML")
+    parser.add_argument("period", help="Dashboard subfolder name, e.g. Jan_2026")
+    return parser.parse_args()
+
+
 def main() -> None:
-    cfg = parse_yaml(YAML_PATH)
-    template = TEMPLATE_PATH.read_text(encoding="utf-8")
+    args = parse_args()
+    period_dir = DASH_DIR / args.period
+    yaml_path = period_dir / "dashboard.yaml"
+    template_path = period_dir / "template.html"
+    site_dir = SITE_DIR / args.period
+    out_html = site_dir / "index.html"
+
+    cfg = parse_yaml(yaml_path)
+    template = template_path.read_text(encoding="utf-8")
     html = (
         template.replace("{{TITLE}}", cfg.get("title", "Dashboard"))
         .replace("{{HEADER}}", render_header(cfg))
@@ -243,19 +258,19 @@ def main() -> None:
         .replace("{{TIP}}", render_tip(cfg))
         .replace("{{PANELS}}", render_panels(cfg))
     )
-    SITE_DIR.mkdir(parents=True, exist_ok=True)
-    (SITE_DIR / "plots").mkdir(parents=True, exist_ok=True)
-    (SITE_DIR / "logos").mkdir(parents=True, exist_ok=True)
-    OUT_HTML.write_text(html, encoding="utf-8")
+    site_dir.mkdir(parents=True, exist_ok=True)
+    (site_dir / "plots").mkdir(parents=True, exist_ok=True)
+    (site_dir / "logos").mkdir(parents=True, exist_ok=True)
+    out_html.write_text(html, encoding="utf-8")
 
     # Copy plots and logos into docs for GitHub Pages.
-    plots_src = BASE_DIR / "plots"
+    plots_src = BASE_DIR / "plots" / args.period
     for plot in plots_src.glob("*.html"):
-        shutil.copy2(plot, SITE_DIR / "plots" / plot.name)
+        shutil.copy2(plot, site_dir / "plots" / plot.name)
 
     for logo in (BASE_DIR / "logos").iterdir():
         if logo.is_file():
-            shutil.copy2(logo, SITE_DIR / "logos" / logo.name)
+            shutil.copy2(logo, site_dir / "logos" / logo.name)
 
 
 if __name__ == "__main__":
