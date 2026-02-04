@@ -1,5 +1,5 @@
 title: Ukraine: State of the Energy System | January 2026
-description: Updated on 29.01.2026
+description: Updated on 04.02.2026
 authors:
   - Prepared by GDU Data and Modelling Team - Robert Carr & Frank Meissner
 contributors:
@@ -18,7 +18,7 @@ panels:
   - id: crossborder
     title: Cross-border electricity trade (commerical flows)
     plot: plots/ua_crossborder_monthly.html
-    note: Data between March and December 2022 is not available. January 2026 goes until the 21st. 
+    note: Data between March and December 2022 is not available. February 2026 stops at 04.02. 
     source: Energy Charts, ENTSO-E Transparency Platform
     bullets:
       - Prior to February 2022, Ukraine was a net electricity exporter, integrated within the IPS/UPS system.
@@ -26,6 +26,7 @@ panels:
       - Strong import surge occured in mid-2024 (over 1.5 TWh/month) to cover domestic shortfalls after Russian attacks in spring 2024.
       - Following  capacity repairs in 2024, imports stabilised, declined and net exports restarted from mid-2025 onwards.
       - Import dependency rises again in October 2025 following further attacks by Russia. December 2025 saw highest volume of imports since January 2025.
+      - January 2026 saw the highest volume of commerical power imports since the start of the war.
   - id: generation
     title: Status of installed generation capacities
     plot: plots/gen_capacity_development.html
@@ -36,6 +37,7 @@ panels:
       - Due to occupation and destruction, renewable energy capacity fell from 9.6 GW (January 2022) to 7.4 GW in October 2025. 
       - November 2025 attacks have hit coal-plants particularly hard, dropping available conventional capacity below 13 GW for the first time since April 2024. 
       - Repairs over the last month have restored around 1.4 GW of net capacity (majority thermal) when accounting for more recent attacks in December/January.
+      - Recent statements from the former CEO of Ukrenergo suggest available conventional capacity is closer to 11 GW.
   - id: gas-storage
     title: Gas storage reserves
     plot: plots/ua_gas_storage_curves.html
